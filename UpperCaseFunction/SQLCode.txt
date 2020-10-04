@@ -1,0 +1,36 @@
+exec sp_changedbowner 'sa';
+
+ALTER DATABASE example2 SET trustworthy ON
+go
+RECONFIGURE;
+GO
+
+/* Step 1 - enable clr on the database - run reconfigure to install */
+sp_configure 'clr enabled', 1  
+GO  
+RECONFIGURE  
+GO
+
+sp_configure 'show advanced options', 0;
+
+/* Step 2 - intall the object in sql 
+For this demo we are using this assembly
+C:\Users\sdeggans\source\repos\UpperCaseFunction\bin\Release\netstandard2.0\UpperCaseFunction.dll
+The fully qualified object name for this is [UpperCaseFunction.UpperCaseFunc]
+It accepts a string and returns a string. The return string should be upper case.
+*/
+CREATE ASSEMBLY [UpperCaseFunction] FROM 
+'C:\assembly\UpperCaseFunction.dll' 
+WITH PERMISSION_SET = UNSAFE;
+
+/* Next we want to test out the assembly to make sure we can use it*/
+GO
+CREATE FUNCTION dbo.UpperCaseFunction(@targetText nvarchar(200)) returns nvarchar(200)
+AS EXTERNAL NAME
+UpperCaseFunction.[UpperCaseFunction.UpperCaseFunc].MakeUpperCase
+GO
+
+USE [example2]
+GO
+/*Test out our new assembly to make sure it's working */
+SELECT [dbo].[UpperCaseFunction] ('this is a test to see if it gets upper case')
